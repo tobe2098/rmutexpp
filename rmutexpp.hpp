@@ -69,7 +69,32 @@ class RMutexGuard{
     operator=(RMutexGuard&&){}
     RMutexGuard(RMutexGuard&)=delete;
     operator=(RMutexGuard&)=delete;
+template <typename... T>
+class RMultiMutexGuard {
+private:
+    std::tuple<RMutex&...> locks_;
+    std::tuple<T&...> data_ptrs_;
+    bool owns_locks_;
+
+    // Helper to lock all RMutex objects
+    template<std::size_t... Is>
+    void lock_all(std::index_sequence<Is...>, RMutex<T>&... mutexes) {
+        // Lock all mutexes to prevent deadlock
+        std::lock(mutexes.get_mutex()...);
+        // Adopt the locks into unique_locks
 };
+
+// Convenience function for multi-lock with RMutex
+template<typename... T>
+auto lock_multiple(RMutex<T>&... mutexes) {
+    return RMultiMutexGuard<T...>(mutexes...);
+}
+
+// Convenience function for multi-try-lock with RMutex
+template<typename... T>
+auto try_lock_multiple(RMutex<T>&... mutexes) {
+    return RMultiMutexGuard<T...>(std::try_to_lock, mutexes...);
+}
 
 
 
