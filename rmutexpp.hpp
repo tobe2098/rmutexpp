@@ -82,6 +82,11 @@ private:
         // Lock all mutexes to prevent deadlock
         std::lock(mutexes.get_mutex()...);
         // Adopt the locks into unique_locks
+        locks_ = std::make_tuple(std::unique_lock<std::mutex>(mutexes.get_mutex(), std::adopt_lock)...);
+        data_ptrs_ = std::make_tuple(&mutexes.get_data()...);
+        owns_locks_ = true;
+    }
+
 };
 
 // Convenience function for multi-lock with RMutex
