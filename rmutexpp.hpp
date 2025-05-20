@@ -68,23 +68,23 @@ class RMutex{
     template<typename... Ts> requires all_are_rmutex<Ts...> friend class RMutexGuard;
 
     // Lock method that returns a guard
-    RMutexGuard<RMutex<T>> lock() {
-        return RMutexGuard<>(*this);
+    [[nodiscard]]RMutexGuard<RMutex<T>> lock()  {
+        return RMutexGuard(*this);
     }
 
     // Const lock method that returns a const guard
-    RMutexGuard<RMutex<const T>> lock() const {
-        return RMutexGuard<>(*this);
+    RMutexGuard<RMutex<const T>> lock()const {
+        return RMutexGuard(*this);
     }
 
     // Try lock method that returns an optional-like wrapper
     // Returns a guard if lock was successful, empty guard otherwise
     RMutexGuard<RMutex<T>> try_lock() {
-        return RMutexGuard<>(std::try_to_lock,*this);
+        return RMutexGuard(std::try_to_lock,*this);
     }
 
     RMutexGuard<RMutex<const T>> try_lock() const {
-        return RMutexGuard<>(std::try_to_lock,*this);
+        return RMutexGuard(std::try_to_lock,*this);
     }
 };
 
@@ -92,7 +92,7 @@ class RMutex{
 template <typename... Ts>
 requires all_are_rmutex<Ts...>
 class [[nodiscard]] RMutexGuard {
-private:
+    //Data members
     std::tuple<Ts&...> locks_; // Each Ts is RMutex<T>
     std::tuple<rmutex_data_type_t<Ts>&...> data_refs_;
     bool owns_locks_;
@@ -101,14 +101,16 @@ private:
     template <std::size_t... Is>
     void lock_all(std::index_sequence<Is...>) {
         // Lock in order to avoid deadlocks
-        (..., std::get<Is>(locks_).get_mutex().lock());
-        data_refs_ = std::make_tuple(&std::get<Is>(locks_).get_data()...);
+        std::lock(std::get<Is>(locks_)._internal_mutex...);
         owns_locks_ = true;
     }
 
     template <std::size_t... Is>
     void unlock_all(std::index_sequence<Is...>) {
-        (..., std::get<Is>(locks_).get_mutex().unlock());
+        if (owns_locks_){
+            (std::get<sizeof...(Is) - Is - 1>(locks_).unlock(), ...);
+            // Using fold expression (C++17) to unlock in reverse order
+        }
     }
 
     template <std::size_t... Is>
@@ -117,16 +119,16 @@ private:
 
         // Helper array to early exit
         bool locks_acquired[] = {
-            (std::get<Is>(locks_).get_mutex().try_lock() ? true : (success = false, false))...
+            (std::get<Is>(locks_)._internal_mutex.try_lock() ? true : (success = false, false))...
         };
 
         if (!success) {
             // Unlock any that were acquired
             for (std::size_t i = 0; i < sizeof...(Is); ++i) {
                 if (locks_acquired[i]) {
-                    std::apply([i](auto&... mutexes) {
+                    std::apply([i](auto&... locks_) {
                         std::size_t idx = 0;
-                        (..., (idx++ == i ? mutexes.get_mutex().unlock() : void()));
+                        (..., (idx++ == i ? locks_._internal_mutex.unlock() : void()));
                     }, locks_);
                 }
             }
@@ -134,7 +136,6 @@ private:
         }
 
         // Store data pointers if success
-        data_refs_ = std::make_tuple(std::get<Is>(locks_).get_data()...);
         owns_locks_ = true;
         return true;
     }
@@ -142,7 +143,7 @@ private:
 
 public:
     // Constructor for regular locking of RMutex objects
-    explicit RMutexGuard(Ts&... mutexes) : owns_locks_(false),locks_(std::forward<Ts>(mutexes)...) {
+    explicit RMutexGuard(Ts&... mutexes) : owns_locks_(false),locks_(mutexes...),data_refs_(mutexes.data...) {
         lock_all(std::index_sequence_for<Ts...>{});
     }
 
@@ -181,7 +182,7 @@ public:
 
     // Check if owns all locks
     bool owns_locks() const noexcept { return owns_locks_; }
-    explicit operator bool() const noexcept { return owns_locks_; }
+    operator bool() const noexcept { return owns_locks_; }
 
     
     // Unlock all mutexes early
