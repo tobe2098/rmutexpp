@@ -11,6 +11,9 @@ int main(void) {
     char&     var  = ((*ref).at(0));
     char&     var2 = ((ref)->at(1));
     std::cout << typeid(var).name() << " " << var << var2 << std::endl;
+    mutex.unlock(std::move(ref));
+    std::cout << ref->at(0);
+    mutex.lock();
   }
   RMutexGuard<RMutex<std::string>, RMutex<std::string>> guard { mutex, mutex2 };
   //   RMutexGuard guard { mutex, mutex2 };

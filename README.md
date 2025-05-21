@@ -12,3 +12,4 @@ A header only library for Rust-like mutex guard behavior
 - Apply for each of a function (function has to be templated?)
 - Apply function to all objects (if locked)
 - Allow .lock() and .try_lock() and .unlock(). Get var reference from it that unlocks on destruction as well.
+- Write all idioms in main.cpp so they can be read and seen to work

@@ -1,6 +1,7 @@
 #ifndef _RUST_MUTEX_GUARD_HEADER_
 #define _RUST_MUTEX_GUARD_HEADER_
 
+#include <iostream>
 #include <mutex>
 #include <optional>
 #include <type_traits>
@@ -91,6 +92,11 @@ class RMutex {
     [[nodiscard]] std::optional<RMutexRef<T>> try_lock() { return RMutexRef<T>::try_acquire(*this); }
 
     [[nodiscard]] std::optional<RMutexRef<const T>> try_lock() const { return RMutexRef<T>::try_acquire(*this); }
+
+    void unlock(RMutexRef<T>&& reference) {
+      RMutexRef<T> holder { std::forward<RMutexRef<T>>(reference) };
+      // reference.~RMutexRef();
+    }
 };
 
 template <typename T>
@@ -148,6 +154,7 @@ class RMutexRef {
     // Move constructor
     RMutexRef(RMutexRef<T>&& other) noexcept: _internal_lock(std::move(other._internal_lock)), data(other.data) {
       // Assuming it is locked because cannot unlock via function calls
+      std::cout << "Move constructor" << std::endl;
     }
 
     // Move assignment operator
