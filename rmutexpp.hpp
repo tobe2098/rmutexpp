@@ -27,26 +27,34 @@ struct rmutex_data_type<RMutex<T>> {
     using type = T;
 };
 
+// Concept that requires at least 2 template arguments
+// template <typename... Ts>
+// concept has_multiple_args = requires { requires(sizeof...(Ts) >= 2); };
+
 template <typename T>
 using rmutex_data_type_t = typename rmutex_data_type<T>::type;
 
 template <typename... Ts>
-  requires all_are_rmutex<Ts...>
-class [[nodiscard]] RMutexGuard;  // Forward declaration of RMutexGuard template
+  requires(all_are_rmutex<Ts...>)
+class RMutexGuard;  // Forward declaration of RMutexGuard template
+
+template <typename T>
+  requires all_are_rmutex<T>
+class RMutexGuard<T>;
 
 template <typename T>
 class RMutex {
     mutable std::mutex _internal_mutex;
-    T                  data;
+    T                  _internal_data;
 
   public:
     template <typename... Args>
-    explicit RMutex(Args&&... args): data(std::forward<Args>(args)...) { }
-    RMutex(): data() { }
+    explicit RMutex(Args&&... args): _internal_data(std::forward<Args>(args)...) { }
+    RMutex(): _internal_data() { }
     // Move constructor
     RMutex(RMutex&& other) noexcept {
       std::lock_guard<std::mutex> lock(other._internal_mutex);
-      data = std::move(other.data);
+      _internal_data = std::move(other._internal_data);
     }
 
     // Move assignment operator
@@ -56,7 +64,7 @@ class RMutex {
         std::lock(_internal_mutex, other._internal_mutex);
         std::lock_guard<std::mutex> lock1(_internal_mutex, std::adopt_lock);
         std::lock_guard<std::mutex> lock2(other._internal_mutex, std::adopt_lock);
-        data = std::move(other.data);
+        _internal_data = std::move(other._internal_data);
       }
       return *this;
     }
@@ -84,72 +92,63 @@ class RMutex {
 
 // The guard class itself — only enabled for RMutex<T>...
 template <typename... Ts>
-  requires all_are_rmutex<Ts...>
+  requires(all_are_rmutex<Ts...>)
 class RMutexGuard {
     // Data members
-    std::tuple<Ts&...>                     locks_;  // Each Ts is RMutex<T>
-    std::tuple<rmutex_data_type_t<Ts>&...> data_refs_;
-    bool                                   owns_locks_;
+    std::tuple<Ts&...>                     _mutexes;  // Each Ts is RMutex<T>
+    std::tuple<rmutex_data_type_t<Ts>&...> _data_refs;
+    bool                                   _owns_locks;
 
     // Helper to lock all RMutex objects
     template <std::size_t... Is>
     void lock_all(std::index_sequence<Is...>) {
-      if constexpr (sizeof...(Is) == 1) {
-        std::get<0>(locks_)._internal_mutex.lock();
-      } else {
-        // Lock in order to avoid deadlocks
-        std::lock(std::get<Is>(locks_)._internal_mutex...);
-      }
-      owns_locks_ = true;
+      // Lock in order to avoid deadlocks
+      std::lock(std::get<Is>(_mutexes)._internal_mutex...);
+      _owns_locks = true;
     }
 
     template <std::size_t... Is>
     void unlock_all(std::index_sequence<Is...>) {
-      if (owns_locks_) {
-        (std::get<sizeof...(Is) - Is - 1>(locks_).unlock(), ...);
+      if (_owns_locks) {
+        (std::get<sizeof...(Is) - Is - 1>(_mutexes).unlock(), ...);
         // Using fold expression (C++17) to unlock in reverse order
       }
     }
 
     template <std::size_t... Is>
     bool try_lock_all(std::index_sequence<Is...>) {
-      if constexpr (sizeof...(Is) == 1) {
-        owns_locks_ = std::get<0>(locks_)._internal_mutex.try_lock();
-      } else {
-        owns_locks_ = std::try_lock(std::get<Is>(locks_)._internal_mutex...) == -1;
-      }
-      return owns_locks_;
+      return _owns_locks = std::try_lock(std::get<Is>(_mutexes)._internal_mutex...) == -1;
     }
 
   public:
     // Constructor for regular locking of RMutex objects
-    [[nodiscard]] explicit RMutexGuard(Ts&... mutexes): owns_locks_(false), locks_(mutexes...), data_refs_(mutexes.data...) {
+    [[nodiscard]] explicit RMutexGuard(Ts&... mutexes): _owns_locks(false), _mutexes(mutexes...), _data_refs(mutexes._internal_data...) {
       lock_all(std::index_sequence_for<Ts...> {});
     }
 
     // Constructor for try locking of RMutex objects
-    RMutexGuard(std::try_to_lock_t, Ts&... mutexes): owns_locks_(false), locks_(mutexes...), data_refs_(mutexes.data...) {
+    RMutexGuard(std::try_to_lock_t, Ts&... mutexes): _owns_locks(false), _mutexes(mutexes...), _data_refs(mutexes._internal_data...) {
       try_lock_all(std::index_sequence_for<Ts...> {});
     }
 
     // Default constructor
-    [[nodiscard]] RMutexGuard(): owns_locks_(false) { }
+    [[nodiscard]] RMutexGuard(): _owns_locks(false) { }
 
     // Destructor
     ~RMutexGuard() = default;
 
     // Move operations
     RMutexGuard(RMutexGuard&& other) noexcept:
-        locks_(std::move(other.locks_)), data_refs_(std::move(other.data_refs_)), owns_locks_(other.owns_locks_) {
-      other.owns_locks_ = false;
+        _mutexes(std::move(other._mutexes)), _data_refs(std::move(other._data_refs)), _owns_locks(other._owns_locks) {
+      other._owns_locks = false;
     }
 
     RMutexGuard& operator=(RMutexGuard&& other) noexcept {
       if (this != &other) {
-        locks_            = std::move(other.locks_);
-        data_refs_        = std::move(other.data_refs_);
-        owns_locks_       = other.owns_locks_;
-        other.owns_locks_ = false;
+        _mutexes          = std::move(other._mutexes);
+        _data_refs        = std::move(other._data_refs);
+        _owns_locks       = other._owns_locks;
+        other._owns_locks = false;
       }
       return *this;
     }
@@ -159,67 +158,28 @@ class RMutexGuard {
     RMutexGuard& operator=(const RMutexGuard&) = delete;
 
     // Check if owns all locks
-    bool     owns_locks() const noexcept { return owns_locks_; }
-    explicit operator bool() const noexcept { return owns_locks_; }
+    bool     owns_locks() const noexcept { return _owns_locks; }
+    explicit operator bool() const noexcept { return _owns_locks; }
 
     // Unlock all mutexes early
     void unlock() {
-      if (owns_locks_) {
-        std::apply([](auto&... locks) { (locks.unlock(), ...); }, locks_);
-        owns_locks_ = false;
+      if (_owns_locks) {
+        std::apply([](auto&... locks) { (locks.unlock(), ...); }, _mutexes);
+        _owns_locks = false;
       }
     }
-
-    std::tuple <
-    // // Functional interface - apply function to all references
-    // template<typename F>
-    // auto apply_all(F&& func) -> decltype(func(std::declval<typename Ts::data_type&...>()...)) {
-    //     if (!owns_locks_) {
-    //         throw std::runtime_error("Attempting to access data through invalid multi-guard");
-    //     }
-    //     return std::apply([&func](T*... ptrs) {
-    //         return func(*ptrs...);
-    //     }, data_refs_);
-    // }
-
-    // template<typename F>
-    // auto apply_all(F&& func) const -> decltype(func(std::declval<const typename Ts::data_type&...>()...)) {
-    //     if (!owns_locks_) {
-    //         throw std::runtime_error("Attempting to access data through invalid multi-guard");
-    //     }
-    //     return std::apply([&func](T*... ptrs) {
-    //         return func(*ptrs...);
-    //     }, data_refs_);
-    // }
-
-    // // Apply function to specific mutex by index
-    // template<std::size_t I, typename F>
-    // auto apply_at(F&& func) -> decltype(func(std::declval<std::tuple_element_t<I, std::tuple<Ts::data_type&...>>&>())) {
-    //     if (!owns_locks_) {
-    //         throw std::runtime_error("Attempting to access data through invalid multi-guard");
-    //     }
-    //     return func(*std::get<I>(data_refs_));
-    // }
-
-    // template<std::size_t I, typename F>
-    // auto apply_at(F&& func) const -> decltype(func(std::declval<const std::tuple_element_t<I, std::tuple<Ts::data_type&...>>&>())) {
-    //     if (!owns_locks_) {
-    //         throw std::runtime_error("Attempting to access data through invalid multi-guard");
-    //     }
-    //     return func(*std::get<I>(data_refs_));
-    // }
+};
+template <typename T>
+  requires all_are_rmutex<T>
+class RMutexGuard<T> {
+    T&                     rmutex;
+    rmutex_data_type_t<T>& data_ref;
 };
 
-// Convenience function for multi-lock with RMutex
-template <typename... T>
-auto lock_multiple(RMutex<T>&... mutexes) {
-  return RMutexGuard<>(mutexes...);
-}
+// Deduction guide - allows the compiler to deduce template arguments from constructor arguments
+template <typename... Ts>
+RMutexGuard(Ts&... args) -> RMutexGuard<Ts...>;
 
-// Convenience function for multi-try-lock with RMutex
-template <typename... T>
-auto try_lock_multiple(RMutex<T>&... mutexes) {
-  return RMutexGuard<>(std::try_to_lock, mutexes...);
-}
-
+template <typename... Ts>
+RMutexGuard(std::try_to_lock_t, Ts&... args) -> RMutexGuard<Ts...>;
 #endif
