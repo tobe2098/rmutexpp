@@ -6,8 +6,8 @@ int main(void) {
   //   RMutexGuard { mutex, mutex2 };
   //   mutex.lock();
   //   mutex2.try_lock();
+  mutex.lock();
   RMutexGuard<RMutex<int>, RMutex<int>> guard { mutex, mutex2 };
   //   RMutexGuard guard { mutex, mutex2 };
-
   // RMutexGuard<int>(4);
 }
