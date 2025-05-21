@@ -1,8 +1,10 @@
 #include <iostream>
+#include <vector>
 #include "rmutex.hpp"
 #include "rmutexguard.hpp"
 int main(void) {
-  RMutex<std::string> mutex { "abs" }, mutex2 {};
+  RMutex<std::string>       mutex { "abs" }, mutex2 {};
+  RMutex<std::vector<int>*> guard2 { new std::vector<int> { 1, 2 } };
   //   RMutexGuard { mutex, mutex2 };
   //   mutex.lock();
   //   mutex2.try_lock();
@@ -11,8 +13,11 @@ int main(void) {
     char&     var  = ((*ref).at(0));
     char&     var2 = ((ref)->at(1));
     std::cout << typeid(var).name() << " " << var << var2 << std::endl;
-    mutex.unlock(std::move(ref));
+    unlock((ref));
+    // Stale memory
     std::cout << ref->at(0);
+    std::cout << ref->at(1);
+    std::cout << ref->at(2);
     mutex.lock();
   }
   RMutexGuard<RMutex<std::string>, RMutex<std::string>> guard { mutex, mutex2 };

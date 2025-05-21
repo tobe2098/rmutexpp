@@ -92,11 +92,6 @@ class RMutex {
     [[nodiscard]] std::optional<RMutexRef<T>> try_lock() { return RMutexRef<T>::try_acquire(*this); }
 
     [[nodiscard]] std::optional<RMutexRef<const T>> try_lock() const { return RMutexRef<T>::try_acquire(*this); }
-
-    void unlock(RMutexRef<T>&& reference) {
-      RMutexRef<T> holder { std::forward<RMutexRef<T>>(reference) };
-      // reference.~RMutexRef();
-    }
 };
 
 template <typename T>
@@ -212,5 +207,9 @@ RMutexRef(RMutex<T>& arg) -> RMutexRef<T>;
  */
 template <typename T>
 RMutexRef(std::try_to_lock_t, RMutex<T>& arg) -> RMutexRef<T>;
+template <typename T>
+[[deprecated("Scope the RMutexRef instead of using unlock()")]] void unlock(RMutexRef<T>& reference) {
+  reference.~RMutexRef();
+}
 
 #endif
