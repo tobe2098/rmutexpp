@@ -3,11 +3,16 @@
 #include "rmutex.hpp"
 #include "rmutexguard.hpp"
 int main(void) {
+  // RMutex<const int>         invalid_mutex { 4 };
   RMutex<std::string>       mutex { "abs" }, mutex2 {};
   RMutex<std::vector<int>*> guard2 { new std::vector<int> { 1, 2 } };
   //   RMutexGuard { mutex, mutex2 };
   //   mutex.lock();
   //   mutex2.try_lock();
+  {
+    const RMutexRef ref = mutex.lock();
+    // ref->at(0)          = '2';
+  }
   {
     RMutexRef ref  = *mutex.try_lock();
     char&     var  = ((*ref).at(0));
@@ -17,9 +22,10 @@ int main(void) {
     // Stale memory
     std::cout << ref->at(0);
     std::cout << ref->at(1);
-    std::cout << ref->at(2);
+    std::cout << ref[2];
     mutex.lock();
   }
+  // Const ref examples
   RMutexGuard<RMutex<std::string>, RMutex<std::string>> guard { mutex, mutex2 };
   //   RMutexGuard guard { mutex, mutex2 };
   // RMutexGuard<int>(4);

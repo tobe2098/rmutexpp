@@ -13,3 +13,4 @@ A header only library for Rust-like mutex guard behavior
 - Apply function to all objects (if locked)
 - Allow .lock() and .try_lock() and .unlock(). Get var reference from it that unlocks on destruction as well.
 - Write all idioms in main.cpp so they can be read and seen to work
+- If mutex is const... why use mutex? It is const. DO not construct if const, give an error saying you should just access with const label.
