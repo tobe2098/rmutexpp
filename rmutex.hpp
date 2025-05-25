@@ -53,6 +53,20 @@ struct is_rmutex<RMutex<T>> : std::true_type { };
 template <typename... Ts>
 inline constexpr bool all_are_rmutex = (is_rmutex<Ts>::value && ...);
 /**
+ * @var is_not_mutex
+ * @brief A convenience variable template to check if a type is RMutex<U>.
+ * @tparam T A template parameter to check.
+ *
+ * This variable template is `true` if and only if type T is not of type RMutex<U>.
+ *
+ * @code
+ * static_assert(is_not_mutex<RMutex<int>>, "Should be false");
+ * static_assert(!is_not_mutex<int>, "Should be true");
+ * @endcode
+ */
+template <typename T>
+inline constexpr bool is_not_mutex = !(is_rmutex<T>::value);
+/**
  * @struct rmutex_data_type
  * @brief Type trait to extract the data type `T` from an `RMutex<T>` specialization.
  * @tparam U The `RMutex` specialization (e.g., `RMutex<int>`).
@@ -93,6 +107,15 @@ struct rmutex_data_type<RMutex<T>> {
  */
 template <typename T>
 using rmutex_data_type_t = typename rmutex_data_type<T>::type;
+
+template <typename T>
+struct rmutex_mutex_type;
+template <typename T>
+struct rmutex_mutex_type<RMutex<T>> {
+    using type = std::mutex;
+};
+template <typename T>
+using rmutex_mutex_type_t = typename rmutex_mutex_type<T>::type;
 // Forward declaration of RMutexGuard template with a concept/requires clause.
 // This indicates that RMutexGuard can only be instantiated with types that are
 // all specializations of RMutex.
@@ -129,6 +152,7 @@ class RMutex {
                   "RMutex cannot be instantiated with a const-qualified type (e.g., const int). "
                   "Mutexes are intended for synchronizing access to mutable data. "
                   "If your data is const, no synchronization is needed.");
+    static_assert(is_not_mutex<T>, "RMutex cannot contain another RMutex as the underlying type for obvious reasons.");
 
     std::mutex _internal_mutex;  ///< The underlying mutex protecting _internal_data.
 
