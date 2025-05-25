@@ -102,7 +102,7 @@ This method involves downloading `rmutexpp`'s source code, building its CMake co
     # Link against the rmutexpp::Core target.
     # This target is now available because FetchContent made it part of your build,
     # and find_package confirmed its properties.
-    target_link_libraries(my_app PRIVATE rmutexpp::Core)
+    target_link_libraries(my_app PRIVATE rmutexpp::core)
     ```
 
 2.  **Include Headers in Your Source Code:**

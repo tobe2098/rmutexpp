@@ -1,68 +1,90 @@
-cmake_minimum_required(VERSION 3.14 FATAL_ERROR) # 3.14 or higher is recommended for FetchContent
-
+cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 project(rmutexpp
     VERSION 1.0.0
     DESCRIPTION "Rust-inspired mutex and mutex guard for C++"
     LANGUAGES CXX
 )
 
-# Enforce C++17 standard, as your code uses features like structured bindings, optional, etc.
+# Enforce C++20 standard
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF) # Prefer standard C++
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Define the header-only library target
-# INTERFACE is used for header-only libraries as they don't produce object files themselves
 add_library(rmutexpp_core INTERFACE)
+
+# Create an alias target for consistent naming
+add_library(rmutexpp::rmutexpp_core ALIAS rmutexpp_core)
 
 # Specify include directories for consumers
 target_include_directories(rmutexpp_core INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include> # When installed, headers will be in 'include'
+    $<INSTALL_INTERFACE:include>
 )
 
-# Specify required C++ features (e.g., for optional, structured bindings)
+# Specify required C++ features
 target_compile_features(rmutexpp_core INTERFACE cxx_std_20)
-target_compile_definitions(rmutexpp_core
-    INTERFACE # Or PRIVATE if only for your library's internal files
+
+target_compile_definitions(rmutexpp_core INTERFACE
     $<IF:$<CONFIG:Debug>,DEBUG_RMUTEX,>
 )
 
-# Install rules for when someone builds/installs your library directly,
-# or when FetchContent "installs" it into its build directory.
-install(TARGETS rmutexpp_core EXPORT rmutexppTargets)
-install(DIRECTORY include/ DESTINATION include)
+# Only set up installation if this is the main project or if explicitly requested
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR RMUTEXPP_INSTALL)
+    include(GNUInstallDirs)
+    include(CMakePackageConfigHelpers)
 
-# Export targets so they can be found by find_package (and thus FetchContent)
-install(EXPORT rmutexppTargets
-  FILE rmutexppTargets.cmake
-  NAMESPACE rmutexpp:: # Adds a namespace to the imported targets, e.g., rmutexpp_core
-  DESTINATION lib/cmake/rmutexpp
-)
+    # Install the target
+    install(TARGETS rmutexpp_core
+        EXPORT rmutexppTargets
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
 
-# You can also add a basic config file for find_package
-configure_file(rmutexppConfig.cmake.in rmutexppConfig.cmake @ONLY)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/rmutexppConfig.cmake"
-        DESTINATION lib/cmake/rmutexpp)
+    # Install headers
+    install(DIRECTORY include/ 
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
 
+    # Install the export set
+    install(EXPORT rmutexppTargets
+        FILE rmutexppTargets.cmake
+        NAMESPACE rmutexpp::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/rmutexpp
+    )
 
+    # Create and install config file
+    configure_package_config_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/rmutexppConfig.cmake.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/rmutexppConfig.cmake"
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/rmutexpp
+    )
 
-enable_testing() # Enables CTest for the project
+    write_basic_package_version_file(
+        "${CMAKE_CURRENT_BINARY_DIR}/rmutexppConfigVersion.cmake"
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion
+    )
 
-include(FetchContent) # Include FetchContent module
+    install(FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/rmutexppConfig.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/rmutexppConfigVersion.cmake"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/rmutexpp
+    )
+endif()
 
-# Fetch Google Test
-FetchContent_Declare(
-    googletest
-    GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG        release-1.12.1 # Or a more recent stable tag
-)
-# This will add the GTest targets (GTest::gtest, GTest::gtest_main)
-FetchContent_MakeAvailable(googletest)
+# Only build tests and examples if this is the main project
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    enable_testing()
+    include(FetchContent)
 
-add_subdirectory(examples) # Existing
-add_subdirectory(test)     
+    # Fetch Google Test
+    FetchContent_Declare(
+        googletest
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG        release-1.12.1
+    )
+    FetchContent_MakeAvailable(googletest)
 
-# Optional: Add testing if you use CTest/GTest etc.
-# enable_testing()
-# add_subdirectory(test)
+    add_subdirectory(examples)
+    add_subdirectory(test)
+endif()
