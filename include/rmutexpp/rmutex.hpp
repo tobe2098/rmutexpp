@@ -135,7 +135,7 @@ namespace rmutexpp {
   // This indicates that rmutex_guard can only be instantiated with types that are
   // all specializations of rmutex.
   template <typename... Ts>
-    requires(all_are_rmutex<Ts...>)
+    requires all_are_rmutex<Ts...>
   class rmutex_guard;
 
   // Forward declaration for class friend declaration.

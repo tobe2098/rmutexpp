@@ -38,7 +38,7 @@ namespace rmutexpp {
    * @requires all_are_rmutex<Ts...> Ensures that all types in the pack are indeed rmutex types.
    */
   template <typename... Ts>
-    requires(all_are_rmutex<Ts...>)
+    requires all_are_rmutex<Ts...>
   class rmutex_guard {
       // Data members
       /// @brief A tuple of unique_lock objects, one for each rmutex.
