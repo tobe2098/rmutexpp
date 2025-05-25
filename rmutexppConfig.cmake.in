@@ -1,0 +1,5 @@
+# rmutexppConfig.cmake.in
+@PACKAGE_INIT@
+
+include("${CMAKE_CURRENT_LIST_DIR}/rmutexppTargets.cmake")
+check_required_components(rmutexpp)
