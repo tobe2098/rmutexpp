@@ -80,7 +80,7 @@ This method involves downloading `rmutexpp`'s source code, building its CMake co
     # Declare the rmutexpp library as a content to fetch
     FetchContent_Declare(
         rmutexpp_lib_content # Internal name for FetchContent
-        GIT_REPOSITORY https://github.com/YOUR_USERNAME/rmutex_lib.git
+        GIT_REPOSITORY https://github.com/tobe2098/rmutexpp.git
         GIT_TAG        main # Or a specific Git tag, e.g., 'v1.0.0', or a commit hash
     )
 
@@ -90,7 +90,7 @@ This method involves downloading `rmutexpp`'s source code, building its CMake co
 
     # Important: Although FetchContent_MakeAvailable adds the project,
     # calling find_package is still the idiomatic and most robust way to ensure
-    # that the imported targets (like rmutexpp::Core) are properly configured
+    # that the imported targets (like rmutexpp::core) are properly configured
     # in your project, especially if the external project uses complex export logic.
     find_package(rmutexpp CONFIG REQUIRED)
     # --- End FetchContent Integration ---
