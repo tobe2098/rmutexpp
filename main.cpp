@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 #include "rmutex.hpp"
-#include "rmutexguard.hpp"
+#include "rmutex_guard.hpp"
 int main(void) {
   // RMutex<const int>         invalid_mutex { 4 };
   // RMutex<RMutex<int>>       invalid_mutex { 4 };

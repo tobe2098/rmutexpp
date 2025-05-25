@@ -1,3 +1,15 @@
+/**
+ * @file rmutex.hpp
+ * @brief Defines the RMutex class, a data container with associated mutex, and RMutexRef a RAII-style reference for RMutex data. Defines
+ * also the concepts used on this repository
+ *
+ * This header provides the RMutex class, which manages the data and
+ * mutex of one or more RMutex instances using a RAII (Resource Acquisition Is Initialization)
+ * approach. It supports locking multiple RMutex objects simultaneously to prevent deadlocks
+ * and provides access to the protected data when locks are held.
+ *
+ * @note This file requires 'rmutex.hpp' for RMutex definitions and helper traits.
+ */
 #ifndef _RUST_MUTEX_HEADER_
 #define _RUST_MUTEX_HEADER_
 
