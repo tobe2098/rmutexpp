@@ -134,7 +134,7 @@ This method involves downloading `rmutexpp`'s source code, building its CMake co
 ### Important Notes:
 
 * **C++ Standard Consistency:** Ensure your consuming project uses the same C++ standard (C++20) or a compatible one as `rmutexpp` (which uses C++20 features like concepts, structured bindings).
-* **Header-Only Library:** `rmutexpp` is a header-only library. This means there's no actual `.lib` or `.so` file generated for `rmutexpp_Core`. CMake primarily generates the necessary include paths and compiler definitions for consuming projects.
+* **Header-Only Library:** `rmutexpp` is a header-only library. This means there's no actual `.lib` or `.so` file generated for `rmutexpp_core`. CMake primarily generates the necessary include paths and compiler definitions for consuming projects.
 * **`PRIVATE` vs. `PUBLIC` vs. `INTERFACE` Linkage:**
-    * When you link `rmutexpp::Core` with `PRIVATE` in `target_link_libraries`, it means only `my_app` needs `rmutexpp::Core`'s headers and definitions.
-    * If `my_app` was itself a library and its public headers exposed types from `rmutexpp`, you might use `PUBLIC` or `INTERFACE` linkage. For a header-only library, `INTERFACE` on your `rmutexpp_Core` target ensures its public headers and definitions are propagated.
+    * When you link `rmutexpp_core` with `PRIVATE` in `target_link_libraries`, it means only `my_app` needs `rmutexpp_core`'s headers and definitions.
+    * If `my_app` was itself a library and its public headers exposed types from `rmutexpp`, you might use `PUBLIC` or `INTERFACE` linkage. For a header-only library, `INTERFACE` on your `rmutexpp_core` target ensures its public headers and definitions are propagated.
