@@ -4,9 +4,10 @@
 #include "rmutexguard.hpp"
 int main(void) {
   // RMutex<const int>         invalid_mutex { 4 };
+  // RMutex<RMutex<int>>       invalid_mutex { 4 };
   RMutex<std::string>       mutex { "abs" }, mutex2 {};
   RMutex<std::vector<int>*> guard2 { new std::vector<int> { 1, 2 } };
-  //   RMutexGuard { mutex, mutex2 };
+  RMutexGuard { mutex, mutex2 };
   //   mutex.lock();
   //   mutex2.try_lock();
   {
@@ -26,7 +27,11 @@ int main(void) {
     mutex.lock();
   }
   // Const ref examples
-  RMutexGuard<RMutex<std::string>, RMutex<std::string>> guard { mutex, mutex2 };
+  {
+    // RMutexGuard<RMutex<std::string>, RMutex<std::string>> f2 { mutex, mutex2 };
+    RMutexGuard<RMutex<std::string>, RMutex<std::string>> guard { mutex, mutex2 };
+    guard.lock();
+  }
   //   RMutexGuard guard { mutex, mutex2 };
   // RMutexGuard<int>(4);
 }
