@@ -63,7 +63,11 @@ jobs:
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
             sudo apt-get install -y gcc-11 g++-11
           else
-            sudo apt-get install -y clang-14 clang++-14
+            sudo apt update
+            sudo apt install -y software-properties-common
+            sudo add-apt-repository -y "deb http://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-17 main" # Or -18, -19 for newer versions
+            sudo apt update
+            sudo apt install -y clang-17 clang-format-17 clang-tidy-17 libc++-17-dev libc++abi-17-dev
           fi
 
       # 3. Setup C++ environment (macOS)
