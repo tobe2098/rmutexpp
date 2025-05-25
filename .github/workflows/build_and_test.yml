@@ -105,9 +105,18 @@ jobs:
       - name: Configure CMake
         shell: bash
         run: |
-          cmake -B build \
-                -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_CXX_STANDARD=${{ matrix.cpp_standard }}
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            # Force static runtime linking on Windows to match Google Test
+            cmake -B build \
+                  -DCMAKE_BUILD_TYPE=Release \
+                  -DCMAKE_CXX_STANDARD=${{ matrix.cpp_standard }} \
+                  -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded \
+                  -Dgtest_force_shared_crt=OFF
+          else
+            cmake -B build \
+                  -DCMAKE_BUILD_TYPE=Release \
+                  -DCMAKE_CXX_STANDARD=${{ matrix.cpp_standard }}
+          fi
 
       # 8. Build the Project
       # Compiles your library and test executables.
