@@ -16,7 +16,7 @@
 #include <mutex>
 #include <optional>
 #include <type_traits>
-#ifdef DEBUG
+#ifdef DEBUG_RMUTEX
 #include <iostream>
 #endif
 
@@ -309,7 +309,7 @@ namespace rmutexpp {
        * into the `rmutex_ref` object.
        */
       rmutex_ref(T& mutex_data_ref, std::unique_lock<std::mutex>&& lock): data(mutex_data_ref), _internal_lock(std::move(lock)) {
-#ifdef DEBUG
+#ifdef DEBUG_RMUTEX
         std::cout << "rmutex_ref constructed (adopted lock). Type of data: " << typeid(data).name() << std::endl;
 #endif
       }
@@ -329,7 +329,7 @@ namespace rmutexpp {
           data(mutex._internal_data),            // Access private data (requires friend declaration)
           _internal_lock(mutex._internal_mutex)  // Acquire lock on private mutex
       {
-#ifdef DEBUG
+#ifdef DEBUG_RMUTEX
         std::cout << "rmutex_ref constructed (locked). Type of data: " << typeid(data).name() << std::endl;
 #endif
       }
@@ -346,18 +346,18 @@ namespace rmutexpp {
        * or std::nullopt if the lock could not be acquired.
        */
       static std::optional<rmutex_ref<T>> try_acquire(rmutex<T>& mutex) {
-#ifdef DEBUG
+#ifdef DEBUG_RMUTEX
         std::cout << "Attempting to acquire lock via try_acquire..." << std::endl;
 #endif
         std::unique_lock<std::mutex> lock(mutex._internal_mutex, std::try_to_lock);
         if (lock.owns_lock()) {
-#ifdef DEBUG
+#ifdef DEBUG_RMUTEX
           std::cout << "  Lock successfully acquired." << std::endl;
 #endif
           // Use the private constructor to create an rmutex_ref with the adopted lock
           return rmutex_ref<T>(mutex._internal_data, std::move(lock));
         } else {
-#ifdef DEBUG
+#ifdef DEBUG_RMUTEX
           std::cout << "  Failed to acquire lock." << std::endl;
 #endif
           return std::nullopt;  // Return empty optional if lock failed
@@ -382,7 +382,7 @@ namespace rmutexpp {
        */
       rmutex_ref(rmutex_ref<T>&& other) noexcept: _internal_lock(std::move(other._internal_lock)), data(other.data) {
         // Assuming it is locked because cannot unlock via function calls
-#ifdef DEBUG
+#ifdef DEBUG_RMUTEX
         std::cout << "Move constructor" << std::endl;
 #endif
       }

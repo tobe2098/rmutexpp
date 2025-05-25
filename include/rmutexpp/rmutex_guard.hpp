@@ -20,7 +20,7 @@
 
 #include "rmutex.hpp"  // For rmutex, rmutex_mutex_type_t, rmutex_data_type_t, all_are_rmutex
 
-#ifdef DEBUG
+#ifdef DEBUG_RMUTEX
 #include <iostream>
 #endif
 namespace rmutexpp {

@@ -23,6 +23,10 @@ target_include_directories(rmutexpp_core INTERFACE
 
 # Specify required C++ features (e.g., for optional, structured bindings)
 target_compile_features(rmutexpp_core INTERFACE cxx_std_20)
+target_compile_definitions(rmutexpp_core
+    INTERFACE # Or PRIVATE if only for your library's internal files
+    $<IF:$<CONFIG:Debug>,DEBUG_RMUTEX,>
+)
 
 # Install rules for when someone builds/installs your library directly,
 # or when FetchContent "installs" it into its build directory.
