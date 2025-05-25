@@ -1,5 +1,5 @@
-#ifndef _RUST_MUTEX_GUARD_HEADER_
-#define _RUST_MUTEX_GUARD_HEADER_
+#ifndef _RUST_MUTEX_HEADER_
+#define _RUST_MUTEX_HEADER_
 
 #include <mutex>
 #include <optional>

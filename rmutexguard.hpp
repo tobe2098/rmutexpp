@@ -2,13 +2,16 @@
 #define _RMUTEX_GUARD_HEADER_
 #include <tuple>
 #include "rmutex.hpp"
+#ifdef DEBUG
+#include <iostream>
+#endif
 // The guard class itself — only enabled for RMutex<T>...
 template <typename... Ts>
   requires(all_are_rmutex<Ts...>)
 class RMutexGuard {
     // Data members
     mutable std::tuple<std::unique_lock<rmutex_mutex_type_t<Ts>>...> _locks;
-    std::tuple<rmutex_data_type_t<Ts>&...>                           _data_refs;
+    std::tuple<Ts&...>                                               _mutex_refs;
 
     mutable bool _owns_locks;
 
@@ -33,18 +36,27 @@ class RMutexGuard {
       return _owns_locks = (std::try_lock(std::get<Is>(_locks)...) == -1);
     }
 
+    template <std::size_t... Is>
+    std::tuple<rmutex_data_type_t<Ts>&...> tuple_of_refs(std::index_sequence<Is...>) & {
+      return std::tie((std::get<Is>(_mutex_refs)._internal_data)...);
+    }
+    template <std::size_t... Is>
+    std::tuple<const rmutex_data_type_t<Ts>&...> tuple_of_refs(std::index_sequence<Is...>) const& {
+      return std::tie((std::get<Is>(_mutex_refs)._internal_data)...);
+    }
+
   public:
     // Constructor for regular locking of RMutex objects
     [[nodiscard]] explicit RMutexGuard(Ts&... mutexes):
         _owns_locks(false), _locks(std::make_tuple(std::unique_lock<rmutex_mutex_type_t<Ts>>(mutexes._internal_mutex, std::defer_lock)...)),
-        _data_refs(mutexes._internal_data...) {
+        _mutex_refs(mutexes...) {
       lock_all(std::index_sequence_for<Ts...> {});
     }
 
     // Constructor for try locking of RMutex objects
     RMutexGuard(std::try_to_lock_t, Ts&... mutexes):
         _owns_locks(false), _locks(std::make_tuple(std::unique_lock<rmutex_mutex_type_t<Ts>>(mutexes._internal_mutex, std::defer_lock)...)),
-        _data_refs(mutexes._internal_data...) {
+        _mutex_refs(mutexes...) {
       try_lock_all(std::index_sequence_for<Ts...> {});
     }
 
@@ -56,14 +68,14 @@ class RMutexGuard {
 
     // Move operations
     RMutexGuard(RMutexGuard&& other) noexcept:
-        _locks(std::move(other._locks)), _data_refs(std::move(other._data_refs)), _owns_locks(other._owns_locks) {
+        _locks(std::move(other._locks)), _mutex_refs(std::move(other._mutex_refs)), _owns_locks(other._owns_locks) {
       other._owns_locks = false;
     }
 
     RMutexGuard& operator=(RMutexGuard&& other) noexcept {
       if (this != &other) {
         _locks            = std::move(other._locks);
-        _data_refs        = std::move(other._data_refs);
+        _mutex_refs       = std::move(other._mutex_refs);
         _owns_locks       = other._owns_locks;
         other._owns_locks = false;
       }
@@ -77,16 +89,29 @@ class RMutexGuard {
     // Check if owns all locks
     bool     owns_locks() const& noexcept { return _owns_locks; }
     explicit operator bool() const& noexcept { return _owns_locks; }
+    bool     owns_locks() const&&    = delete;
+    explicit operator bool() const&& = delete;
 
-    // Unlock all mutexes early
-    // void unlock() {
-    //   if (_owns_locks) {
-    //     std::apply([](auto&... locks) { (locks.unlock(), ...); }, _locks);
-    //     _owns_locks = false;
-    //   }
-    // }
     bool try_lock() const& { return try_lock_all(std::index_sequence_for<Ts...> {}); }
     void lock() const& { lock_all(std::index_sequence_for<Ts...> {}); }
+
+    std::optional<std::tuple<rmutex_data_type_t<Ts>&...>> get_data() & {
+      if (_owns_locks) {
+        return tuple_of_refs(std::index_sequence_for<Ts...> {});
+      } else {
+        return std::nullopt;
+      }
+    }
+    std::optional<std::tuple<const rmutex_data_type_t<Ts>&...>> get_data() const& {
+      if (_owns_locks) {
+        return tuple_of_refs(std::index_sequence_for<Ts...> {});
+      } else {
+        return std::nullopt;
+      }
+    }
+    // Explicitly delete rvalue versions to prevent temporary access
+    std::optional<std::tuple<rmutex_data_type_t<Ts>&...>>       get_data() &&      = delete;
+    std::optional<std::tuple<const rmutex_data_type_t<Ts>&...>> get_data() const&& = delete;
 };
 template <typename T>
   requires all_are_rmutex<T>
