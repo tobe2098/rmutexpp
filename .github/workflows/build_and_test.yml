@@ -106,16 +106,19 @@ jobs:
         shell: bash
         run: |
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            # Force static runtime linking on Windows to match Google Test
+            # Force consistent runtime library usage on Windows
             cmake -B build \
                   -DCMAKE_BUILD_TYPE=Release \
                   -DCMAKE_CXX_STANDARD=${{ matrix.cpp_standard }} \
-                  -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded \
-                  -Dgtest_force_shared_crt=OFF
+                  -DCMAKE_POLICY_DEFAULT_CMP0091=NEW \
+                  -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL \
+                  -Dgtest_force_shared_crt=ON \
+                  -DBUILD_GMOCK=OFF \
+                  -DINSTALL_GTEST=OFF
           else
             cmake -B build \
-                  -DCMAKE_BUILD_TYPE=Release \
-                  -DCMAKE_CXX_STANDARD=${{ matrix.cpp_standard }}
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_CXX_STANDARD=${{ matrix.cpp_standard }}
           fi
 
       # 8. Build the Project
