@@ -414,12 +414,12 @@ namespace rmutexpp {
        * @brief Dereference operator to access the protected data.
        * @return A reference to the protected data.
        */
-      T& operator*() & { return data; }
+      T& operator*() { return data; }
       /**
        * @brief Member access operator to access members of the protected data.
        * @return A pointer to the protected data.
        */
-      T* operator->() & { return &data; }
+      T* operator->() { return &data; }
       /**
        * @brief Implicit conversion operator to T&.
        *
@@ -429,17 +429,17 @@ namespace rmutexpp {
        *
        * @return A reference to the protected data.
        */
-      operator T&() & { return data; }
+      operator T&() { return data; }
       /**
        * @brief Dereference operator to access the protected data.
        * @return A reference to the protected data.
        */
-      const T& operator*() const& { return data; }
+      const T& operator*() const { return data; }
       /**
        * @brief Member access operator to access members of the protected data.
        * @return A pointer to the protected data.
        */
-      const T* operator->() const& { return &data; }
+      const T* operator->() const { return &data; }
       /**
        * @brief Implicit conversion operator to T&.
        *
@@ -449,7 +449,7 @@ namespace rmutexpp {
        *
        * @return A reference to the protected data.
        */
-      operator const T&() const& { return data; }
+      operator const T&() const { return data; }
       /**
        * @brief Dereference operator to access elements using array-like indexing (non-const).
        *
@@ -462,6 +462,11 @@ namespace rmutexpp {
        * The behavior for out-of-bounds access depends on the `T` type's `operator[]` implementation.
        */
       decltype(auto) operator[](std::size_t index) { return data[index]; }
+      /**
+       * @brief Conversion operator to bool.
+       * @return True if the rmutex_ref currently owns its lock, false otherwise.
+       */
+      explicit operator bool() const& noexcept { return _internal_lock.owns_lock(); }
   };
 
   // Deduction guides - allows the compiler to deduce template arguments from constructor arguments.

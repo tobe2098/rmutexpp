@@ -42,8 +42,22 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/rmutexppConfig.cmake"
         DESTINATION lib/cmake/rmutexpp)
 
 
-# Optional: Add an example project
-add_subdirectory(examples)
+
+enable_testing() # Enables CTest for the project
+
+include(FetchContent) # Include FetchContent module
+
+# Fetch Google Test
+FetchContent_Declare(
+    googletest
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG        release-1.12.1 # Or a more recent stable tag
+)
+# This will add the GTest targets (GTest::gtest, GTest::gtest_main)
+FetchContent_MakeAvailable(googletest)
+
+add_subdirectory(examples) # Existing
+add_subdirectory(test)     
 
 # Optional: Add testing if you use CTest/GTest etc.
 # enable_testing()

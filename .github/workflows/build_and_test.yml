@@ -1,0 +1,101 @@
+# .github/workflows/build_and_test.yml
+
+name: C++ CI/CD (Build & Test)
+
+# --- Triggers ---
+# This workflow will run on every push to the 'main' branch
+# and on every pull request targeting the 'main' branch.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# --- Jobs Definition ---
+jobs:
+  build-and-test:
+    name: Build & Test on ${{ matrix.os }} with ${{ matrix.compiler }} C++${{ matrix.cpp_standard }}
+
+    # --- Matrix Strategy ---
+    # Define a matrix to test across different operating systems and compilers.
+    # This ensures your library is robust across various environments.
+    strategy:
+      fail-fast: false # Don't cancel other matrix jobs if one fails
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest] # Test on Linux, Windows, macOS
+        compiler: [gcc, clang] # Test with GCC and Clang
+        cpp_standard: [20] # Explicitly test with C++20
+
+        # Exclude specific combinations that might not be supported or are redundant
+        exclude:
+          - os: windows-latest
+            compiler: gcc # GCC on Windows is typically MinGW, which can have setup complexities. MSVC (default) is preferred.
+          - os: macos-latest
+            compiler: gcc # Clang is the default and preferred compiler on macOS.
+
+    # The operating system to run the job on, taken from the matrix.
+    runs-on: ${{ matrix.os }}
+
+    # --- Steps Definition ---
+    steps:
+      # 1. Checkout the repository code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Setup C++ environment (compiler, C++ standard)
+      # This action automatically installs the specified compiler and sets up environment variables.
+      - name: Setup C++ Compiler (${{ matrix.compiler }})
+        uses: actions/setup-cpp@v1
+        with:
+          compiler: ${{ matrix.compiler }}
+          cxx-standard: ${{ matrix.cpp_standard }} # Ensures C++20 is used
+
+      # 3. Cache CMake dependencies (like Google Test from FetchContent)
+      # This speeds up subsequent runs by reusing downloaded dependencies.
+      - name: Cache CMake Dependencies
+        uses: actions/cache@v3
+        with:
+          # Cache the _deps directory where FetchContent downloads are stored
+          path: ${{ github.workspace }}/build/_deps
+          # Key based on CMakeLists.txt hash to invalidate cache if dependencies change
+          key: ${{ runner.os }}-${{ matrix.compiler }}-${{ hashFiles('CMakeLists.txt', 'test/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.compiler }}-
+
+      # 4. Configure CMake
+      # Creates the build system files (e.g., Makefiles, Visual Studio projects).
+      - name: Configure CMake
+        run: cmake -B ${{ github.workspace }}/build -DCMAKE_BUILD_TYPE=Release # -B specifies out-of-source build directory
+
+      # 5. Build the Project
+      # Compiles your library and test executables.
+      - name: Build
+        run: cmake --build ${{ github.workspace }}/build
+
+      # 6. Run Tests using CTest
+      # Executes all tests defined in your CMake project.
+      - name: Run Tests
+        # --test-dir: Specifies where the test executables are located.
+        # --output-on-failure: Prints test output only if a test fails (useful for debugging).
+        # --output-junit: Generates a JUnit XML report (useful for GitHub's test summary).
+        run: ctest --test-dir ${{ github.workspace }}/build --output-on-failure --output-junit results.xml
+
+      # 7. Upload Test Results (Optional but Recommended)
+      # Uploads the JUnit XML report as an artifact, which GitHub Actions can parse
+      # to display test summaries directly in the workflow run.
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v3
+        if: always() # Always run this step, even if tests fail
+        with:
+          name: test-results-${{ runner.os }}-${{ matrix.compiler }}
+          path: ${{ github.workspace }}/build/results.xml
+
+      # 8. Upload Build Logs (Optional)
+      # Useful for debugging build failures.
+      - name: Upload Build Logs
+        uses: actions/upload-artifact@v3
+        if: failure() # Only upload logs if the build failed
+        with:
+          name: build-logs-${{ runner.os }}-${{ matrix.compiler }}
+          path: ${{ github.workspace }}/build/CMakeFiles/CMakeOutput.log
+            ${{ github.workspace }}/build/CMakeFiles/CMakeError.log
