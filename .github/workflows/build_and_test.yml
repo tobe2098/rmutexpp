@@ -94,7 +94,7 @@ jobs:
         uses: actions/cache@v4
         with:
           # Cache the _deps directory where FetchContent downloads are stored
-          path: ${{ github.workspace }}/build/_deps
+          path: build/_deps
           # Key based on CMakeLists.txt hash to invalidate cache if dependencies change
           key: ${{ runner.os }}-${{ matrix.compiler }}-${{ hashFiles('CMakeLists.txt', 'test/CMakeLists.txt') }}
           restore-keys: |
@@ -103,37 +103,42 @@ jobs:
       # 7. Configure CMake
       # Creates the build system files (e.g., Makefiles, Visual Studio projects).
       - name: Configure CMake
+        shell: bash
         run: |
-          cmake -B ${{ github.workspace }}/build \
+          cmake -B build \
                 -DCMAKE_BUILD_TYPE=Release \
                 -DCMAKE_CXX_STANDARD=${{ matrix.cpp_standard }}
 
       # 8. Build the Project
       # Compiles your library and test executables.
       - name: Build
-        run: cmake --build ${{ github.workspace }}/build --config Release
+        shell: bash
+        run: cmake --build build --config Release
 
       # 9. Run Tests using CTest
       # Executes all tests defined in your CMake project.
       - name: Run Tests
-        working-directory: ${{ github.workspace }}/build
+        shell: bash
         run: |
+          cd build
           ctest --output-on-failure --build-config Release
 
-      # 10. Upload Test Results (Optional but Recommended)
+      # 10. Generate Test Report (Optional but Recommended)
       # Note: JUnit XML generation might need additional CMake configuration
       - name: Generate Test Report
         if: always()
-        working-directory: ${{ github.workspace }}/build
+        shell: bash
         run: |
-          ctest --output-junit test-results.xml --build-config Release || true
+          cd build
+          ctest --output-junit test-results.xml --build-config Release || echo "JUnit XML generation not supported"
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
         if: always() # Always run this step, even if tests fail
         with:
           name: test-results-${{ runner.os }}-${{ matrix.compiler }}
-          path: ${{ github.workspace }}/build/test-results.xml
+          path: build/test-results.xml
+          if-no-files-found: ignore
 
       # 11. Upload Build Logs (Optional)
       # Useful for debugging build failures.
@@ -143,5 +148,6 @@ jobs:
         with:
           name: build-logs-${{ runner.os }}-${{ matrix.compiler }}
           path: |
-            ${{ github.workspace }}/build/CMakeFiles/CMakeOutput.log
-            ${{ github.workspace }}/build/CMakeFiles/CMakeError.log
+            build/CMakeFiles/CMakeOutput.log
+            build/CMakeFiles/CMakeError.log
+          if-no-files-found: ignore
