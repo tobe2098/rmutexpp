@@ -2,6 +2,7 @@
 
 This library provides `rmutex`,`rmutex_ref` and `rmutex_guard`, C++ implementations inspired by Rust's robust concurrency primitives. Designed for thread-safe data access, these classes leverage RAII (Resource Acquisition Is Initialization) to simplify mutex management and help prevent common concurrency bugs like deadlocks and data races.
 
+[![C++ CI/CD (Build & Test)](https://github.com/tobe2098/rmutexpp/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/tobe2098/rmutexpp/actions/workflows/build_and_test.yml)
 ---
 
 ### Key Components
